@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Crypto Sentiment</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: #1e293b;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #334155;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            background: linear-gradient(90deg, #00d4ff, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav a {
+            color: #94a3b8;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .nav a:hover {
+            color: #ffffff;
+        }
+
+        .main {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid #334155;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            color: #94a3b8;
+        }
+
+        .card-value {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .placeholder {
+            background: #334155;
+            border-radius: 8px;
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+        }
+
+        .coming-soon {
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .coming-soon h2 {
+            margin-bottom: 1rem;
+            color: #f472b6;
+        }
+
+        .phase-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: #7c3aed;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">Crypto Sentiment</div>
+        <nav class="nav">
+            <a href="/">Home</a>
+            <a href="/dashboard">Dashboard</a>
+            <a href="/health">API Health</a>
+        </nav>
+    </header>
+
+    <main class="main">
+        <div class="coming-soon">
+            <h2>Dashboard Coming Soon</h2>
+            <p>The full dashboard will be implemented in Phase 2.</p>
+            <span class="phase-badge">Phase 0 Complete</span>
+        </div>
+
+        <div class="grid" style="margin-top: 2rem;">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Fear & Greed Index</span>
+                </div>
+                <div class="placeholder">Coming in Phase 1</div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Trending Coins</span>
+                </div>
+                <div class="placeholder">Coming in Phase 1</div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Whale Activity</span>
+                </div>
+                <div class="placeholder">Coming in Phase 1</div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Social Sentiment</span>
+                </div>
+                <div class="placeholder">Coming in Phase 1</div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

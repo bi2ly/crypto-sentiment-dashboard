@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Sentiment Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+        }
+
+        .container {
+            text-align: center;
+            padding: 2rem;
+            max-width: 800px;
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(90deg, #00d4ff, #7c3aed, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            color: #94a3b8;
+            margin-bottom: 2rem;
+        }
+
+        .status-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 2rem 0;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(34, 197, 94, 0.2);
+            border-radius: 9999px;
+            color: #22c55e;
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .feature {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        .feature:hover {
+            transform: translateY(-4px);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-desc {
+            font-size: 0.875rem;
+            color: #94a3b8;
+        }
+
+        .api-section {
+            margin-top: 2rem;
+            text-align: left;
+        }
+
+        .api-endpoint {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            margin: 0.5rem 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            color: #22c55e;
+        }
+
+        .version {
+            margin-top: 2rem;
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+
+        a {
+            color: #00d4ff;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Crypto Sentiment Dashboard</h1>
+        <p class="subtitle">Professional cryptocurrency market sentiment analysis with AI-powered insights</p>
+
+        <div class="status-card">
+            <div class="status-indicator">
+                <span class="status-dot"></span>
+                Application Running
+            </div>
+            <p style="margin-top: 1rem; color: #94a3b8;">
+                The dashboard is being developed. Phase 0 complete - project structure initialized.
+            </p>
+        </div>
+
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">📊</div>
+                <div class="feature-title">Market Data</div>
+                <div class="feature-desc">Real-time prices, volume, and market cap from CoinGecko</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">😨</div>
+                <div class="feature-title">Fear & Greed</div>
+                <div class="feature-desc">Track market sentiment with historical data</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🐋</div>
+                <div class="feature-title">Whale Tracking</div>
+                <div class="feature-desc">Monitor large transactions and exchange flows</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">📱</div>
+                <div class="feature-title">Social Sentiment</div>
+                <div class="feature-desc">Reddit, news, and influencer mentions</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🔔</div>
+                <div class="feature-title">Smart Alerts</div>
+                <div class="feature-desc">Custom alerts via email and Telegram</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🎯</div>
+                <div class="feature-title">Opportunity Score</div>
+                <div class="feature-desc">AI-powered investment signals</div>
+            </div>
+        </div>
+
+        <div class="api-section">
+            <h3 style="margin-bottom: 1rem;">API Endpoints (Coming Soon)</h3>
+            <div class="api-endpoint">GET /api/v1/market/trending</div>
+            <div class="api-endpoint">GET /api/v1/market/prices?coins=bitcoin,ethereum</div>
+            <div class="api-endpoint">GET /api/v1/sentiment/fear-greed</div>
+            <div class="api-endpoint">GET /api/v1/whales/transactions</div>
+            <div class="api-endpoint">GET /api/v1/opportunities</div>
+        </div>
+
+        <div class="version">
+            <p>v0.1.0 - Phase 0: Project Setup Complete</p>
+            <p style="margin-top: 0.5rem;">
+                <a href="/health">Health Check</a> |
+                <a href="https://github.com/YOUR_USERNAME/crypto-sentiment-dashboard">GitHub</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
