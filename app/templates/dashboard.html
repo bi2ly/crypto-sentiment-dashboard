@@ -1,167 +1,196 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Crypto Sentiment</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+{% extends "base.html" %}
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #0f172a;
-            color: #e2e8f0;
-            min-height: 100vh;
-        }
+{% block title %}Dashboard - Crypto Sentiment{% endblock %}
 
-        .header {
-            background: #1e293b;
-            padding: 1rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #334155;
-        }
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
 
-        .logo {
-            font-size: 1.5rem;
-            font-weight: bold;
-            background: linear-gradient(90deg, #00d4ff, #7c3aed);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+{% block content %}
+<!-- Dashboard Header -->
+<div class="dashboard-header">
+    <div>
+        <h1 class="dashboard-title">Market Dashboard</h1>
+        <p class="dashboard-subtitle">Real-time cryptocurrency sentiment analysis</p>
+    </div>
+    <div class="dashboard-actions">
+        <span class="last-updated" id="lastUpdated">
+            <span class="status-dot"></span>
+            Loading...
+        </span>
+        <button class="refresh-btn" id="refreshBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 4v6h-6M1 20v-6h6"/>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+            Refresh
+        </button>
+    </div>
+</div>
 
-        .nav {
-            display: flex;
-            gap: 2rem;
-        }
-
-        .nav a {
-            color: #94a3b8;
-            text-decoration: none;
-            transition: color 0.2s;
-        }
-
-        .nav a:hover {
-            color: #ffffff;
-        }
-
-        .main {
-            padding: 2rem;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-        }
-
-        .card {
-            background: #1e293b;
-            border-radius: 12px;
-            padding: 1.5rem;
-            border: 1px solid #334155;
-        }
-
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-
-        .card-title {
-            font-size: 1rem;
-            color: #94a3b8;
-        }
-
-        .card-value {
-            font-size: 2rem;
-            font-weight: bold;
-        }
-
-        .placeholder {
-            background: #334155;
-            border-radius: 8px;
-            height: 200px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #64748b;
-        }
-
-        .coming-soon {
-            text-align: center;
-            padding: 3rem;
-        }
-
-        .coming-soon h2 {
-            margin-bottom: 1rem;
-            color: #f472b6;
-        }
-
-        .phase-badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            background: #7c3aed;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            margin-top: 1rem;
-        }
-    </style>
-</head>
-<body>
-    <header class="header">
-        <div class="logo">Crypto Sentiment</div>
-        <nav class="nav">
-            <a href="/">Home</a>
-            <a href="/dashboard">Dashboard</a>
-            <a href="/health">API Health</a>
-        </nav>
-    </header>
-
-    <main class="main">
-        <div class="coming-soon">
-            <h2>Dashboard Coming Soon</h2>
-            <p>The full dashboard will be implemented in Phase 2.</p>
-            <span class="phase-badge">Phase 0 Complete</span>
+<!-- Main Grid -->
+<div class="grid grid-auto">
+    <!-- Fear & Greed Index Card -->
+    <div class="card fear-greed-card">
+        <div class="card-header">
+            <span class="card-title">Fear & Greed Index</span>
+            <span class="card-badge">Updated Daily</span>
         </div>
 
-        <div class="grid" style="margin-top: 2rem;">
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">Fear & Greed Index</span>
+        <div class="gauge-container gauge-neutral">
+            <!-- SVG Gauge -->
+            <div class="gauge">
+                <svg class="gauge-bg" viewBox="0 0 200 120">
+                    <!-- Background Arc -->
+                    <path
+                        class="gauge-arc gauge-arc-bg"
+                        d="M 20 100 A 80 80 0 0 1 180 100"
+                    />
+                    <!-- Value Arc -->
+                    <path
+                        id="gaugeArc"
+                        class="gauge-arc gauge-arc-value"
+                        d="M 20 100 A 80 80 0 0 1 180 100"
+                    />
+                </svg>
+
+                <!-- Needle -->
+                <div class="gauge-needle" id="gaugeNeedle"></div>
+
+                <!-- Labels -->
+                <div class="gauge-labels">
+                    <span>0</span>
+                    <span>100</span>
                 </div>
-                <div class="placeholder">Coming in Phase 1</div>
             </div>
 
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">Trending Coins</span>
-                </div>
-                <div class="placeholder">Coming in Phase 1</div>
-            </div>
+            <!-- Value Display -->
+            <div class="gauge-value" id="fearGreedValue">--</div>
+            <div class="gauge-label" id="fearGreedLabel">Loading...</div>
+            <p class="gauge-description">
+                Market sentiment indicator based on volatility, momentum, social media, and surveys
+            </p>
+        </div>
+    </div>
 
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">Whale Activity</span>
-                </div>
-                <div class="placeholder">Coming in Phase 1</div>
-            </div>
+    <!-- Signal Card -->
+    <div class="card signal-card">
+        <div class="card-header">
+            <span class="card-title">Market Signal</span>
+            <span class="card-badge">Contrarian Strategy</span>
+        </div>
 
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">Social Sentiment</span>
-                </div>
-                <div class="placeholder">Coming in Phase 1</div>
+        <div class="signal-indicator">
+            <div class="signal-icon hold">⏸️</div>
+            <div class="signal-text">
+                <div class="signal-action hold">HOLD</div>
+                <div class="signal-strength">Loading...</div>
             </div>
         </div>
-    </main>
-</body>
-</html>
+
+        <p class="signal-reasoning">
+            Analyzing market conditions...
+        </p>
+    </div>
+
+    <!-- Trending Coins Card -->
+    <div class="card trending-card">
+        <div class="card-header">
+            <span class="card-title">Trending Coins</span>
+            <span class="card-badge">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                    <polyline points="17 6 23 6 23 12"/>
+                </svg>
+                Live
+            </span>
+        </div>
+
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">#</th>
+                        <th>Coin</th>
+                        <th class="text-right">Rank</th>
+                        <th class="text-right">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="trendingTableBody">
+                    <!-- Loading skeleton -->
+                    <tr>
+                        <td colspan="4">
+                            <div class="loading">
+                                <div class="spinner"></div>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- API Status Section -->
+<div class="card mt-4">
+    <div class="card-header">
+        <span class="card-title">API Status</span>
+    </div>
+
+    <div class="api-status-grid">
+        <div class="api-status-item">
+            <span class="api-status-dot offline" id="status-coingecko"></span>
+            <span class="api-status-name">CoinGecko</span>
+            <span class="api-status-label">Market Data</span>
+        </div>
+        <div class="api-status-item">
+            <span class="api-status-dot offline" id="status-fear_greed"></span>
+            <span class="api-status-name">Fear & Greed</span>
+            <span class="api-status-label">Sentiment</span>
+        </div>
+        <div class="api-status-item">
+            <span class="api-status-dot offline" id="status-whale_alert"></span>
+            <span class="api-status-name">Whale Alert</span>
+            <span class="api-status-label">Transactions</span>
+        </div>
+        <div class="api-status-item">
+            <span class="api-status-dot offline" id="status-reddit"></span>
+            <span class="api-status-name">Reddit</span>
+            <span class="api-status-label">Social</span>
+        </div>
+        <div class="api-status-item">
+            <span class="api-status-dot offline" id="status-news_api"></span>
+            <span class="api-status-name">NewsAPI</span>
+            <span class="api-status-label">News</span>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="stats-grid mt-4">
+    <div class="stat-card">
+        <div class="stat-icon">📊</div>
+        <div class="stat-value" id="statTrending">--</div>
+        <div class="stat-label">Trending Coins</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">🔄</div>
+        <div class="stat-value" id="statRefreshRate">60s</div>
+        <div class="stat-label">Refresh Rate</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">🌐</div>
+        <div class="stat-value" id="statAPIs">5</div>
+        <div class="stat-label">Data Sources</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">⚡</div>
+        <div class="stat-value">Live</div>
+        <div class="stat-label">Data Status</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}
