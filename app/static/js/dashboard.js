@@ -80,6 +80,9 @@ const Dashboard = {
             // Load advanced features data in parallel
             await this.loadAdvancedData();
 
+            // Load Phase 4 smart analysis data
+            await this.loadSmartData();
+
             // Update timestamp
             this.updateLastUpdated();
 
@@ -102,50 +105,131 @@ const Dashboard = {
                 upgradesData,
                 influencerData
             ] = await Promise.all([
-                this.fetchAPI('/api/v1/sectors').catch(e => null),
-                this.fetchAPI('/api/v1/whales/analysis').catch(e => null),
-                this.fetchAPI('/api/v1/analysis/technical/bitcoin').catch(e => null),
-                this.fetchAPI('/api/v1/development').catch(e => null),
-                this.fetchAPI('/api/v1/calendar/listings').catch(e => null),
-                this.fetchAPI('/api/v1/calendar/unlocks').catch(e => null),
-                this.fetchAPI('/api/v1/calendar/upgrades').catch(e => null),
-                this.fetchAPI('/api/v1/influencers/activity').catch(e => null)
+                this.fetchAPI('/api/v1/sectors').catch(e => ({ error: e.message })),
+                this.fetchAPI('/api/v1/whales/analysis').catch(e => ({ error: e.message })),
+                this.fetchAPI('/api/v1/analysis/technical/bitcoin').catch(e => ({ error: e.message })),
+                this.fetchAPI('/api/v1/development').catch(e => ({ error: e.message })),
+                this.fetchAPI('/api/v1/calendar/listings').catch(e => ({ error: e.message })),
+                this.fetchAPI('/api/v1/calendar/unlocks').catch(e => ({ error: e.message })),
+                this.fetchAPI('/api/v1/calendar/upgrades').catch(e => ({ error: e.message })),
+                this.fetchAPI('/api/v1/influencers/activity').catch(e => ({ error: e.message }))
             ]);
 
-            // Update advanced components
+            // Update advanced components with error handling
             if (sectorsData?.data) {
                 SectorPerformance.update(sectorsData.data);
+            } else {
+                SectorPerformance.showError(sectorsData?.error || 'Failed to load sector data');
             }
+
             if (whalesData?.data) {
                 WhaleAlerts.update(whalesData.data);
+            } else {
+                WhaleAlerts.showError(whalesData?.error || 'Failed to load whale data');
             }
+
             if (technicalData?.data) {
                 TechnicalIndicators.update(technicalData.data);
+            } else {
+                TechnicalIndicators.showError(technicalData?.error || 'Failed to load technical data');
             }
+
             if (devData?.data) {
                 DevActivity.update(devData.data);
+            } else {
+                DevActivity.showError(devData?.error || 'Failed to load development data');
             }
+
             if (listingsData?.data) {
                 CalendarEvents.updateListings(listingsData.data);
+            } else {
+                CalendarEvents.showListingsError(listingsData?.error || 'Failed to load listings');
             }
+
             if (unlocksData?.data) {
                 CalendarEvents.updateUnlocks(unlocksData.data);
+            } else {
+                CalendarEvents.showUnlocksError(unlocksData?.error || 'Failed to load unlocks');
             }
+
             if (upgradesData?.data) {
                 CalendarEvents.updateUpgrades(upgradesData.data);
+            } else {
+                CalendarEvents.showUpgradesError(upgradesData?.error || 'Failed to load upgrades');
             }
+
             if (influencerData?.data) {
                 InfluencerFeed.update(influencerData.data);
+            } else {
+                InfluencerFeed.showError(influencerData?.error || 'Failed to load influencer data');
             }
         } catch (error) {
             console.error('Failed to load advanced data:', error);
+            // Show error state for all components on total failure
+            this.showAllErrors('Connection error');
+        }
+    },
+
+    showAllErrors(message) {
+        SectorPerformance.showError(message);
+        WhaleAlerts.showError(message);
+        TechnicalIndicators.showError(message);
+        DevActivity.showError(message);
+        CalendarEvents.showListingsError(message);
+        CalendarEvents.showUnlocksError(message);
+        CalendarEvents.showUpgradesError(message);
+        InfluencerFeed.showError(message);
+        // Phase 4 components
+        OpportunityScore.showError(message);
+        RiskAssessment.showError(message);
+        AlertsPanel.showError(message);
+    },
+
+    async loadSmartData() {
+        try {
+            const smartData = await this.fetchAPI('/api/v1/dashboard/smart').catch(e => ({ error: e.message }));
+
+            if (smartData?.data) {
+                // Update Phase 4 components
+                OpportunityScore.update(smartData.data.opportunity);
+                RiskAssessment.update(smartData.data.risk);
+                AlertsPanel.update(smartData.data.alerts);
+
+                // Update factors breakdown
+                if (smartData.data.opportunity?.factors) {
+                    FactorsBreakdown.update(smartData.data.opportunity.factors);
+                }
+
+                // Show warnings if any
+                if (smartData.data.risk?.warnings?.length > 0) {
+                    RiskWarnings.update(smartData.data.risk.warnings);
+                }
+            } else {
+                OpportunityScore.showError(smartData?.error || 'Failed to load smart data');
+                RiskAssessment.showError(smartData?.error || 'Failed to load smart data');
+                AlertsPanel.showError(smartData?.error || 'Failed to load smart data');
+            }
+        } catch (error) {
+            console.error('Failed to load smart data:', error);
         }
     },
 
     async fetchAPI(url) {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.json();
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
+        try {
+            const response = await fetch(url, { signal: controller.signal });
+            clearTimeout(timeoutId);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+        } catch (error) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                throw new Error('Request timeout');
+            }
+            throw error;
+        }
     },
 
     updateLastUpdated() {
@@ -416,6 +500,13 @@ const SectorPerformance = {
         const div = document.createElement('div');
         div.textContent = text || '';
         return div.innerHTML;
+    },
+
+    showError(message) {
+        const container = document.getElementById('sectorList');
+        if (container) {
+            container.innerHTML = `<div class="error-state"><span class="error-icon">⚠️</span><span class="error-message">${message}</span></div>`;
+        }
     }
 };
 
@@ -426,6 +517,12 @@ const WhaleAlerts = {
     update(data) {
         const container = document.getElementById('whaleAlerts');
         if (!container) return;
+
+        // Handle API not configured case
+        if (data?.configured === false || data?.status === 'unavailable') {
+            container.innerHTML = `<div class="info-state"><span class="info-icon">ℹ️</span><span class="info-message">${data.message || 'Whale Alert API not configured'}</span></div>`;
+            return;
+        }
 
         const transactions = data?.recent_transactions || data?.transactions || [];
 
@@ -471,6 +568,13 @@ const WhaleAlerts = {
         if (!timestamp) return 'Recently';
         const date = new Date(timestamp);
         return date.toLocaleTimeString();
+    },
+
+    showError(message) {
+        const container = document.getElementById('whaleAlerts');
+        if (container) {
+            container.innerHTML = `<div class="error-state"><span class="error-icon">⚠️</span><span class="error-message">${message}</span></div>`;
+        }
     }
 };
 
@@ -483,19 +587,44 @@ const TechnicalIndicators = {
         if (!container) return;
 
         const indicators = data?.indicators || {};
-        const summary = data?.summary || {};
+        const summary = data?.recommendation || {};
+
+        // Extract RSI value (can be object {value, signal} or number)
+        const rsiData = indicators.rsi || {};
+        const rsiValue = typeof rsiData === 'object' ? rsiData.value : rsiData;
+        const rsiSignal = typeof rsiData === 'object' ? rsiData.signal : this.getRSISignalFromValue(rsiValue);
 
         container.innerHTML = `
-            ${this.renderIndicator('RSI (14)', indicators.rsi, this.getRSISignal(indicators.rsi))}
+            ${this.renderRSI(rsiValue, rsiSignal)}
             ${this.renderMACD(indicators.macd)}
             ${this.renderBollinger(indicators.bollinger_bands, data?.current_price)}
             ${this.renderSummary(summary)}
         `;
     },
 
+    renderRSI(value, signal) {
+        const signalClass = (signal || '').toLowerCase().includes('buy') || (signal || '').toLowerCase() === 'oversold' ? 'buy' :
+                           (signal || '').toLowerCase().includes('sell') || (signal || '').toLowerCase() === 'overbought' ? 'sell' : 'neutral';
+        const displayValue = value != null ? Number(value).toFixed(2) : 'N/A';
+        const displaySignal = signal || this.getRSISignalFromValue(value);
+
+        return `
+            <div class="indicator-item">
+                <div>
+                    <div class="indicator-label">RSI (14)</div>
+                    ${this.renderRSIBar(value)}
+                </div>
+                <div style="text-align: right;">
+                    <div class="indicator-value">${displayValue}</div>
+                    <span class="indicator-signal ${signalClass}">${displaySignal}</span>
+                </div>
+            </div>
+        `;
+    },
+
     renderIndicator(label, value, signal) {
         const signalClass = signal === 'Buy' ? 'buy' : signal === 'Sell' ? 'sell' : 'neutral';
-        const displayValue = value != null ? value.toFixed(2) : 'N/A';
+        const displayValue = value != null ? Number(value).toFixed(2) : 'N/A';
 
         return `
             <div class="indicator-item">
@@ -523,20 +652,27 @@ const TechnicalIndicators = {
 
     renderMACD(macd) {
         if (!macd) return '';
-        const signal = macd.histogram > 0 ? 'Buy' : macd.histogram < 0 ? 'Sell' : 'Neutral';
-        const signalClass = signal === 'Buy' ? 'buy' : signal === 'Sell' ? 'sell' : 'neutral';
+        // Handle both {macd_line, signal_line, histogram} and {macd, signal, histogram, trend} formats
+        const macdLine = macd.macd_line ?? macd.macd;
+        const signalLine = macd.signal_line ?? macd.signal;
+        const histogram = macd.histogram;
+        const trend = macd.trend;
+
+        const signalText = trend ? (trend === 'BULLISH' ? 'Buy' : trend === 'BEARISH' ? 'Sell' : 'Neutral') :
+                          (histogram > 0 ? 'Buy' : histogram < 0 ? 'Sell' : 'Neutral');
+        const signalClass = signalText === 'Buy' ? 'buy' : signalText === 'Sell' ? 'sell' : 'neutral';
 
         return `
             <div class="indicator-item">
                 <div>
                     <div class="indicator-label">MACD</div>
                     <div style="font-size: 0.75rem; color: var(--text-muted);">
-                        Line: ${macd.macd_line?.toFixed(2) || 'N/A'} | Signal: ${macd.signal_line?.toFixed(2) || 'N/A'}
+                        Line: ${macdLine != null ? Number(macdLine).toFixed(2) : 'N/A'} | Signal: ${signalLine != null ? Number(signalLine).toFixed(2) : 'N/A'}
                     </div>
                 </div>
                 <div style="text-align: right;">
-                    <div class="indicator-value">${macd.histogram?.toFixed(2) || 'N/A'}</div>
-                    <span class="indicator-signal ${signalClass}">${signal}</span>
+                    <div class="indicator-value">${histogram != null ? Number(histogram).toFixed(2) : 'N/A'}</div>
+                    <span class="indicator-signal ${signalClass}">${signalText}</span>
                 </div>
             </div>
         `;
@@ -564,14 +700,16 @@ const TechnicalIndicators = {
     },
 
     renderSummary(summary) {
-        if (!summary?.overall_signal) return '';
-        const signal = summary.overall_signal;
+        if (!summary) return '';
+        // Handle both {overall_signal} and {action, strength} formats
+        const signal = summary.overall_signal || summary.action || 'HOLD';
+        const strength = summary.strength || '';
         const signalClass = signal.toLowerCase().includes('buy') ? 'buy' :
                            signal.toLowerCase().includes('sell') ? 'sell' : 'neutral';
 
         return `
             <div class="indicator-item" style="background: var(--bg-secondary);">
-                <div class="indicator-label">Overall Signal</div>
+                <div class="indicator-label">Overall Signal ${strength ? `(${strength})` : ''}</div>
                 <span class="indicator-signal ${signalClass}" style="font-size: 0.875rem; padding: 0.5rem 1rem;">
                     ${signal}
                 </span>
@@ -579,11 +717,18 @@ const TechnicalIndicators = {
         `;
     },
 
-    getRSISignal(rsi) {
+    getRSISignalFromValue(rsi) {
         if (rsi == null) return 'N/A';
         if (rsi <= 30) return 'Buy';
         if (rsi >= 70) return 'Sell';
         return 'Neutral';
+    },
+
+    showError(message) {
+        const container = document.getElementById('technicalIndicators');
+        if (container) {
+            container.innerHTML = `<div class="error-state"><span class="error-icon">⚠️</span><span class="error-message">${message}</span></div>`;
+        }
     }
 };
 
@@ -627,6 +772,13 @@ const DevActivity = {
         const div = document.createElement('div');
         div.textContent = text || '';
         return div.innerHTML;
+    },
+
+    showError(message) {
+        const container = document.getElementById('devActivity');
+        if (container) {
+            container.innerHTML = `<div class="error-state"><span class="error-icon">⚠️</span><span class="error-message">${message}</span></div>`;
+        }
     }
 };
 
@@ -746,6 +898,27 @@ const CalendarEvents = {
         const div = document.createElement('div');
         div.textContent = text || '';
         return div.innerHTML;
+    },
+
+    showListingsError(message) {
+        const container = document.getElementById('listingEvents');
+        if (container) {
+            container.innerHTML = `<div class="error-state"><span class="error-icon">⚠️</span><span class="error-message">${message}</span></div>`;
+        }
+    },
+
+    showUnlocksError(message) {
+        const container = document.getElementById('unlockEvents');
+        if (container) {
+            container.innerHTML = `<div class="error-state"><span class="error-icon">⚠️</span><span class="error-message">${message}</span></div>`;
+        }
+    },
+
+    showUpgradesError(message) {
+        const container = document.getElementById('upgradeEvents');
+        if (container) {
+            container.innerHTML = `<div class="error-state"><span class="error-icon">⚠️</span><span class="error-message">${message}</span></div>`;
+        }
     }
 };
 
@@ -804,6 +977,388 @@ const InfluencerFeed = {
         if (total >= 1e6) return (total / 1e6).toFixed(1) + 'M engagements';
         if (total >= 1e3) return (total / 1e3).toFixed(1) + 'K engagements';
         return total + ' engagements';
+    },
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text || '';
+        return div.innerHTML;
+    },
+
+    showError(message) {
+        const container = document.getElementById('influencerFeed');
+        if (container) {
+            container.innerHTML = `<div class="error-state"><span class="error-icon">⚠️</span><span class="error-message">${message}</span></div>`;
+        }
+    }
+};
+
+// ==========================================================================
+// Phase 4: Opportunity Score Component
+// ==========================================================================
+const OpportunityScore = {
+    update(data) {
+        const container = document.getElementById('opportunityScore');
+        if (!container) return;
+
+        if (!data || data.error) {
+            this.showError(data?.error || 'No data available');
+            return;
+        }
+
+        const score = data.score ?? 0;
+        const signal = data.signal || 'NEUTRAL';
+        const confidence = data.confidence ?? 0;
+
+        const signalClass = this.getSignalClass(signal);
+        const scoreColor = this.getScoreColor(score);
+
+        container.innerHTML = `
+            <div class="opportunity-score-display">
+                <div class="score-circle ${signalClass}" style="--score-color: ${scoreColor}">
+                    <span class="score-value">${Math.round(score)}</span>
+                    <span class="score-max">/100</span>
+                </div>
+                <div class="score-signal ${signalClass}">${this.formatSignal(signal)}</div>
+                <div class="score-confidence">
+                    <span class="confidence-label">Confidence:</span>
+                    <span class="confidence-value">${Math.round(confidence * 100)}%</span>
+                </div>
+            </div>
+            ${data.recommendation ? `<p class="score-recommendation">${data.recommendation}</p>` : ''}
+        `;
+    },
+
+    getSignalClass(signal) {
+        const map = {
+            'STRONG_BUY': 'signal-strong-buy',
+            'BUY': 'signal-buy',
+            'NEUTRAL': 'signal-neutral',
+            'SELL': 'signal-sell',
+            'STRONG_SELL': 'signal-strong-sell'
+        };
+        return map[signal] || 'signal-neutral';
+    },
+
+    getScoreColor(score) {
+        if (score >= 80) return '#10b981';
+        if (score >= 65) return '#22c55e';
+        if (score >= 45) return '#eab308';
+        if (score >= 35) return '#f97316';
+        return '#ef4444';
+    },
+
+    formatSignal(signal) {
+        return (signal || '').replace(/_/g, ' ');
+    },
+
+    showError(message) {
+        const container = document.getElementById('opportunityScore');
+        if (container) {
+            container.innerHTML = `<div class="error-state"><span class="error-icon">⚠️</span><span class="error-message">${message}</span></div>`;
+        }
+    }
+};
+
+// ==========================================================================
+// Phase 4: Risk Assessment Component
+// ==========================================================================
+const RiskAssessment = {
+    update(data) {
+        const container = document.getElementById('riskAssessment');
+        if (!container) return;
+
+        if (!data || data.error) {
+            this.showError(data?.error || 'No data available');
+            return;
+        }
+
+        const overallRisk = data.overall_risk || 'MODERATE';
+        const riskScore = data.risk_score ?? 50;
+        const categories = data.categories || {};
+
+        const riskClass = this.getRiskClass(overallRisk);
+
+        container.innerHTML = `
+            <div class="risk-overview">
+                <div class="risk-level ${riskClass}">
+                    <span class="risk-icon">${this.getRiskIcon(overallRisk)}</span>
+                    <span class="risk-label">${this.formatRisk(overallRisk)}</span>
+                </div>
+                <div class="risk-score-bar">
+                    <div class="risk-bar-fill" style="width: ${riskScore}%"></div>
+                </div>
+                <span class="risk-score-value">${Math.round(riskScore)}/100</span>
+            </div>
+            <div class="risk-categories">
+                ${this.renderCategories(categories)}
+            </div>
+        `;
+    },
+
+    renderCategories(categories) {
+        const categoryNames = {
+            volatility: 'Volatility',
+            liquidity: 'Liquidity',
+            market: 'Market',
+            concentration: 'Concentration',
+            technical: 'Technical',
+            sentiment: 'Sentiment'
+        };
+
+        return Object.entries(categories).map(([key, value]) => {
+            const level = value?.level || 'MODERATE';
+            const score = value?.score ?? 50;
+            return `
+                <div class="risk-category">
+                    <span class="category-name">${categoryNames[key] || key}</span>
+                    <span class="category-level ${this.getRiskClass(level)}">${this.formatRisk(level)}</span>
+                </div>
+            `;
+        }).join('');
+    },
+
+    getRiskClass(level) {
+        const map = {
+            'MINIMAL': 'risk-minimal',
+            'LOW': 'risk-low',
+            'MODERATE': 'risk-moderate',
+            'HIGH': 'risk-high',
+            'EXTREME': 'risk-extreme'
+        };
+        return map[level] || 'risk-moderate';
+    },
+
+    getRiskIcon(level) {
+        const map = {
+            'MINIMAL': '✅',
+            'LOW': '🟢',
+            'MODERATE': '🟡',
+            'HIGH': '🟠',
+            'EXTREME': '🔴'
+        };
+        return map[level] || '🟡';
+    },
+
+    formatRisk(level) {
+        return (level || '').charAt(0) + (level || '').slice(1).toLowerCase();
+    },
+
+    showError(message) {
+        const container = document.getElementById('riskAssessment');
+        if (container) {
+            container.innerHTML = `<div class="error-state"><span class="error-icon">⚠️</span><span class="error-message">${message}</span></div>`;
+        }
+    }
+};
+
+// ==========================================================================
+// Phase 4: Alerts Panel Component
+// ==========================================================================
+const AlertsPanel = {
+    update(data) {
+        const summaryContainer = document.getElementById('alertsSummary');
+        const listContainer = document.getElementById('alertsList');
+        const countBadge = document.getElementById('alertCount');
+
+        if (!data || data.error) {
+            this.showError(data?.error || 'No data available');
+            return;
+        }
+
+        const alerts = data.recent_alerts || data.alerts || [];
+        const summary = data.summary || {};
+
+        // Update count badge
+        if (countBadge) {
+            countBadge.textContent = alerts.length;
+            countBadge.className = `card-badge alert-count ${alerts.length > 0 ? 'has-alerts' : ''}`;
+        }
+
+        // Update summary
+        if (summaryContainer) {
+            summaryContainer.innerHTML = `
+                <div class="alerts-summary-grid">
+                    <div class="alert-stat">
+                        <span class="alert-stat-value critical">${summary.critical || 0}</span>
+                        <span class="alert-stat-label">Critical</span>
+                    </div>
+                    <div class="alert-stat">
+                        <span class="alert-stat-value high">${summary.high || 0}</span>
+                        <span class="alert-stat-label">High</span>
+                    </div>
+                    <div class="alert-stat">
+                        <span class="alert-stat-value medium">${summary.medium || 0}</span>
+                        <span class="alert-stat-label">Medium</span>
+                    </div>
+                    <div class="alert-stat">
+                        <span class="alert-stat-value low">${summary.low || 0}</span>
+                        <span class="alert-stat-label">Low</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Update alerts list
+        if (listContainer) {
+            if (alerts.length === 0) {
+                listContainer.innerHTML = `<div class="info-state"><span class="info-icon">ℹ️</span><span class="info-message">No alerts in the last 24 hours</span></div>`;
+            } else {
+                listContainer.innerHTML = alerts.slice(0, 10).map(alert => this.renderAlert(alert)).join('');
+            }
+        }
+    },
+
+    renderAlert(alert) {
+        const priorityClass = (alert.priority || 'medium').toLowerCase();
+        const time = alert.triggered_at ? this.formatTime(alert.triggered_at) : 'Just now';
+
+        return `
+            <div class="alert-item ${priorityClass}">
+                <span class="alert-priority-dot ${priorityClass}"></span>
+                <div class="alert-content">
+                    <div class="alert-message">${this.escapeHtml(alert.message || alert.name || 'Alert triggered')}</div>
+                    <div class="alert-meta">
+                        <span class="alert-type">${alert.alert_type || 'GENERAL'}</span>
+                        <span class="alert-time">${time}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    formatTime(timestamp) {
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diff = Math.floor((now - date) / 1000);
+
+        if (diff < 60) return 'Just now';
+        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+        return date.toLocaleDateString();
+    },
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text || '';
+        return div.innerHTML;
+    },
+
+    showError(message) {
+        const summaryContainer = document.getElementById('alertsSummary');
+        const listContainer = document.getElementById('alertsList');
+
+        if (summaryContainer) {
+            summaryContainer.innerHTML = `<div class="error-state"><span class="error-icon">⚠️</span><span class="error-message">${message}</span></div>`;
+        }
+        if (listContainer) {
+            listContainer.innerHTML = `<div class="error-state"><span class="error-icon">⚠️</span><span class="error-message">${message}</span></div>`;
+        }
+    }
+};
+
+// ==========================================================================
+// Phase 4: Factors Breakdown Component
+// ==========================================================================
+const FactorsBreakdown = {
+    update(factors) {
+        const container = document.getElementById('factorsBreakdown');
+        if (!container) return;
+
+        if (!factors || Object.keys(factors).length === 0) {
+            container.innerHTML = `<div class="info-state"><span class="info-icon">ℹ️</span><span class="info-message">No factor data available</span></div>`;
+            return;
+        }
+
+        const factorConfig = {
+            sentiment: { label: 'Sentiment', icon: '😊', weight: 0.20 },
+            technical: { label: 'Technical', icon: '📈', weight: 0.25 },
+            whale_activity: { label: 'Whale Activity', icon: '🐋', weight: 0.15 },
+            development: { label: 'Development', icon: '💻', weight: 0.10 },
+            volume: { label: 'Volume', icon: '📊', weight: 0.15 },
+            price_action: { label: 'Price Action', icon: '💰', weight: 0.15 }
+        };
+
+        container.innerHTML = Object.entries(factors).map(([key, data]) => {
+            const config = factorConfig[key] || { label: key, icon: '📌', weight: 0 };
+            const score = data?.score ?? data ?? 0;
+            const signal = data?.signal || this.getSignalFromScore(score);
+
+            return `
+                <div class="factor-card">
+                    <div class="factor-header">
+                        <span class="factor-icon">${config.icon}</span>
+                        <span class="factor-name">${config.label}</span>
+                        <span class="factor-weight">${Math.round(config.weight * 100)}%</span>
+                    </div>
+                    <div class="factor-score-bar">
+                        <div class="factor-bar-fill ${this.getScoreClass(score)}" style="width: ${score}%"></div>
+                    </div>
+                    <div class="factor-footer">
+                        <span class="factor-score">${Math.round(score)}/100</span>
+                        <span class="factor-signal ${this.getScoreClass(score)}">${signal}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    },
+
+    getSignalFromScore(score) {
+        if (score >= 70) return 'Bullish';
+        if (score >= 55) return 'Slightly Bullish';
+        if (score >= 45) return 'Neutral';
+        if (score >= 30) return 'Slightly Bearish';
+        return 'Bearish';
+    },
+
+    getScoreClass(score) {
+        if (score >= 70) return 'score-high';
+        if (score >= 45) return 'score-medium';
+        return 'score-low';
+    }
+};
+
+// ==========================================================================
+// Phase 4: Risk Warnings Component
+// ==========================================================================
+const RiskWarnings = {
+    update(warnings) {
+        const container = document.getElementById('riskWarnings');
+        const card = document.getElementById('riskWarningsCard');
+
+        if (!container || !card) return;
+
+        if (!warnings || warnings.length === 0) {
+            card.style.display = 'none';
+            return;
+        }
+
+        card.style.display = 'block';
+        container.innerHTML = warnings.map(warning => this.renderWarning(warning)).join('');
+    },
+
+    renderWarning(warning) {
+        const severityClass = (warning.severity || 'medium').toLowerCase();
+
+        return `
+            <div class="warning-item ${severityClass}">
+                <span class="warning-icon">${this.getWarningIcon(severityClass)}</span>
+                <div class="warning-content">
+                    <div class="warning-title">${this.escapeHtml(warning.title || warning.category || 'Warning')}</div>
+                    <div class="warning-message">${this.escapeHtml(warning.message || warning.description || '')}</div>
+                </div>
+            </div>
+        `;
+    },
+
+    getWarningIcon(severity) {
+        const map = {
+            'low': '⚠️',
+            'medium': '🟡',
+            'high': '🟠',
+            'critical': '🔴'
+        };
+        return map[severity] || '⚠️';
     },
 
     escapeHtml(text) {

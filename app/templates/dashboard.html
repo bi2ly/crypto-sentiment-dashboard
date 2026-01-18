@@ -305,6 +305,86 @@
         </div>
     </div>
 </div>
+
+<!-- Smart Analysis Section (Phase 4) -->
+<h2 class="section-title mt-4">Smart Analysis</h2>
+
+<div class="grid grid-3">
+    <!-- Opportunity Score Card -->
+    <div class="card opportunity-card">
+        <div class="card-header">
+            <span class="card-title">Opportunity Score</span>
+            <span class="card-badge score-badge">BTC</span>
+        </div>
+        <div class="opportunity-content" id="opportunityScore">
+            <div class="loading">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Risk Assessment Card -->
+    <div class="card risk-card">
+        <div class="card-header">
+            <span class="card-title">Risk Assessment</span>
+            <span class="card-badge risk-badge">Live</span>
+        </div>
+        <div class="risk-content" id="riskAssessment">
+            <div class="loading">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Summary Card -->
+    <div class="card alerts-card">
+        <div class="card-header">
+            <span class="card-title">Smart Alerts</span>
+            <span class="card-badge alert-count" id="alertCount">0</span>
+        </div>
+        <div class="alerts-content" id="alertsSummary">
+            <div class="loading">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Factor Breakdown -->
+<div class="card mt-4">
+    <div class="card-header">
+        <span class="card-title">Score Factors</span>
+        <span class="card-badge">Breakdown</span>
+    </div>
+    <div class="factors-grid" id="factorsBreakdown">
+        <div class="loading">
+            <div class="spinner"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Active Alerts List -->
+<div class="card mt-4">
+    <div class="card-header">
+        <span class="card-title">Recent Alerts</span>
+        <span class="card-badge">Last 24h</span>
+    </div>
+    <div class="alerts-list" id="alertsList">
+        <div class="loading">
+            <div class="spinner"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Risk Warnings -->
+<div class="card mt-4" id="riskWarningsCard" style="display: none;">
+    <div class="card-header">
+        <span class="card-title">Risk Warnings</span>
+        <span class="card-badge warning-badge">Action Required</span>
+    </div>
+    <div class="warnings-list" id="riskWarnings">
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}

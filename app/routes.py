@@ -1152,3 +1152,513 @@ def get_advanced_dashboard():
             'status': 'error',
             'message': str(e)
         }), 500
+
+
+# =============================================================================
+# API Routes - Opportunity Scoring (Phase 4)
+# =============================================================================
+
+from app.services import opportunity_scorer, alert_system, risk_assessment
+
+
+@api_bp.route('/opportunity/<coin_id>')
+def get_opportunity_score(coin_id: str):
+    """
+    Get composite opportunity score for a cryptocurrency.
+
+    Args:
+        coin_id: CoinGecko coin ID
+
+    Returns:
+        JSON with opportunity score and factor breakdown.
+    """
+    try:
+        # Gather data from various sources
+        fear_greed_data = fear_greed.get_current_index()
+        tech_data = technical.analyze_coin(coin_id)
+        whale_data = whale_tracker.get_whale_analysis()
+        dev_data = None
+
+        # Get development data if available
+        if coin_id in github_tracker.GitHubTracker.REPOSITORIES:
+            dev_data = github_tracker.get_project_activity(coin_id)
+
+        # Get price data from CoinGecko
+        market_data = coingecko.get_market_data([coin_id])
+        price_data = None
+        volume_data = None
+
+        if market_data:
+            coin_market = market_data[0] if market_data else {}
+            price_data = {
+                'current_price': coin_market.get('current_price'),
+                'price_change_24h': coin_market.get('price_change_percentage_24h', 0),
+                'price_change_7d': coin_market.get('price_change_percentage_7d_in_currency', 0),
+                'volatility': tech_data.get('indicators', {}).get('volatility', 0) if tech_data else 0
+            }
+            volume_data = {
+                'total_volume': coin_market.get('total_volume', 0),
+                'volume_change_24h': 0,  # Would need historical data
+                'volume_to_avg_ratio': 1
+            }
+
+        # Calculate opportunity score
+        score = opportunity_scorer.calculate_opportunity_score(
+            sentiment_data={'fear_greed': fear_greed_data},
+            technical_data=tech_data,
+            whale_data=whale_data,
+            development_data=dev_data,
+            volume_data=volume_data,
+            price_data=price_data
+        )
+
+        score['coin_id'] = coin_id
+
+        return jsonify({
+            'status': 'success',
+            'data': score
+        })
+
+    except Exception as e:
+        logger.error(f"Error calculating opportunity score: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+@api_bp.route('/opportunity/compare')
+def compare_opportunities():
+    """
+    Compare opportunity scores for multiple coins.
+
+    Query params:
+        coins: Comma-separated list of coin IDs
+
+    Returns:
+        JSON with ranked opportunity scores.
+    """
+    try:
+        coins_param = request.args.get('coins', 'bitcoin,ethereum,solana')
+        coin_ids = [c.strip() for c in coins_param.split(',')][:10]  # Max 10 coins
+
+        # Get fear & greed once (applies to all)
+        fear_greed_data = fear_greed.get_current_index()
+        whale_data = whale_tracker.get_whale_analysis()
+
+        scores = []
+        for coin_id in coin_ids:
+            try:
+                tech_data = technical.analyze_coin(coin_id)
+                dev_data = None
+                if coin_id in github_tracker.GitHubTracker.REPOSITORIES:
+                    dev_data = github_tracker.get_project_activity(coin_id)
+
+                score = opportunity_scorer.calculate_opportunity_score(
+                    sentiment_data={'fear_greed': fear_greed_data},
+                    technical_data=tech_data,
+                    whale_data=whale_data,
+                    development_data=dev_data
+                )
+
+                scores.append({
+                    'coin_id': coin_id,
+                    'composite_score': score['composite_score'],
+                    'signal': score['signal'],
+                    'confidence': score['confidence']['level'],
+                    'risk_level': score['risk_level']['level']
+                })
+            except Exception as e:
+                logger.warning(f"Error scoring {coin_id}: {e}")
+
+        # Sort by score descending
+        scores.sort(key=lambda x: x['composite_score'], reverse=True)
+
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'timestamp': datetime.utcnow().isoformat(),
+                'scores': scores,
+                'top_opportunity': scores[0] if scores else None
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error comparing opportunities: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+# =============================================================================
+# API Routes - Alert System (Phase 4)
+# =============================================================================
+
+@api_bp.route('/alerts')
+def get_alerts():
+    """
+    Get recent alerts.
+
+    Query params:
+        hours: Number of hours to look back (default: 24)
+
+    Returns:
+        JSON with triggered alerts.
+    """
+    try:
+        hours = int(request.args.get('hours', 24))
+        alerts = alert_system.get_recent_alerts(hours)
+
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'alerts': alerts,
+                'count': len(alerts),
+                'period_hours': hours
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error fetching alerts: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+@api_bp.route('/alerts/rules')
+def get_alert_rules():
+    """
+    Get all alert rules.
+
+    Returns:
+        JSON with alert rule definitions.
+    """
+    try:
+        rules = alert_system.get_alert_rules()
+
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'rules': rules,
+                'total': len(rules)
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error fetching alert rules: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+@api_bp.route('/alerts/summary')
+def get_alerts_summary():
+    """
+    Get alert system summary.
+
+    Returns:
+        JSON with alert statistics.
+    """
+    try:
+        summary = alert_system.get_alert_summary()
+
+        return jsonify({
+            'status': 'success',
+            'data': summary
+        })
+
+    except Exception as e:
+        logger.error(f"Error fetching alert summary: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+@api_bp.route('/alerts/evaluate', methods=['POST'])
+def evaluate_alerts():
+    """
+    Evaluate alert rules against current market data.
+
+    Returns:
+        JSON with any triggered alerts.
+    """
+    try:
+        # Gather current market data
+        fear_greed_data = fear_greed.get_current_index()
+        tech_data = technical.analyze_coin('bitcoin')
+
+        market_data = {
+            'fear_greed': fear_greed_data,
+            'rsi': tech_data.get('indicators', {}).get('rsi') if tech_data else None,
+            'macd': tech_data.get('indicators', {}).get('macd') if tech_data else None
+        }
+
+        # Calculate opportunity score
+        score = opportunity_scorer.calculate_opportunity_score(
+            sentiment_data={'fear_greed': fear_greed_data},
+            technical_data=tech_data
+        )
+        market_data['opportunity_score'] = score['composite_score']
+
+        # Evaluate rules
+        triggered = alert_system.evaluate_alerts(market_data)
+
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'triggered_alerts': triggered,
+                'count': len(triggered),
+                'evaluated_at': datetime.utcnow().isoformat()
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error evaluating alerts: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+@api_bp.route('/alerts/rules', methods=['POST'])
+def create_alert_rule():
+    """
+    Create a custom alert rule.
+
+    Request body:
+        name: Rule name
+        type: Alert type (price, sentiment, technical, etc.)
+        coin_id: Coin ID or '*' for all
+        conditions: List of condition objects
+        logic: 'AND' or 'OR' (optional, default 'AND')
+        priority: low, medium, high, critical (optional)
+        cooldown_minutes: Minutes between triggers (optional)
+
+    Returns:
+        JSON with created rule.
+    """
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                'status': 'error',
+                'message': 'No data provided'
+            }), 400
+
+        required_fields = ['name', 'type', 'coin_id', 'conditions']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({
+                    'status': 'error',
+                    'message': f'Missing required field: {field}'
+                }), 400
+
+        system = alert_system.get_alert_system()
+        result = system.create_custom_rule(
+            name=data['name'],
+            alert_type=data['type'],
+            coin_id=data['coin_id'],
+            conditions=data['conditions'],
+            logic=data.get('logic', 'AND'),
+            priority=data.get('priority', 'medium'),
+            cooldown_minutes=data.get('cooldown_minutes', 60)
+        )
+
+        return jsonify({
+            'status': 'success',
+            'data': result
+        })
+
+    except Exception as e:
+        logger.error(f"Error creating alert rule: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+# =============================================================================
+# API Routes - Risk Assessment (Phase 4)
+# =============================================================================
+
+@api_bp.route('/risk/<coin_id>')
+def get_risk_assessment(coin_id: str):
+    """
+    Get comprehensive risk assessment for a cryptocurrency.
+
+    Args:
+        coin_id: CoinGecko coin ID
+
+    Returns:
+        JSON with risk indicators and warnings.
+    """
+    try:
+        # Gather data
+        fear_greed_data = fear_greed.get_current_index()
+        tech_data = technical.analyze_coin(coin_id)
+        whale_data = whale_tracker.get_whale_analysis()
+
+        # Get market data
+        market_data_list = coingecko.get_market_data([coin_id])
+        market_data = market_data_list[0] if market_data_list else {}
+
+        price_data = {
+            'current_price': market_data.get('current_price'),
+            'price_change_24h': market_data.get('price_change_percentage_24h', 0),
+            'price_change_7d': market_data.get('price_change_percentage_7d_in_currency', 0),
+            'volatility': tech_data.get('indicators', {}).get('volatility', 0) if tech_data else 0
+        }
+
+        volume_data = {
+            'total_volume': market_data.get('total_volume', 0),
+            'market_cap': market_data.get('market_cap', 0)
+        }
+
+        # Perform risk assessment
+        assessment = risk_assessment.assess_risk(
+            price_data=price_data,
+            volume_data=volume_data,
+            market_data={'market_cap': market_data.get('market_cap', 0)},
+            whale_data=whale_data,
+            technical_data=tech_data,
+            sentiment_data={'fear_greed': fear_greed_data}
+        )
+
+        assessment['coin_id'] = coin_id
+
+        return jsonify({
+            'status': 'success',
+            'data': assessment
+        })
+
+    except Exception as e:
+        logger.error(f"Error assessing risk: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+@api_bp.route('/risk/market')
+def get_market_risk():
+    """
+    Get overall market risk assessment.
+
+    Returns:
+        JSON with market-wide risk indicators.
+    """
+    try:
+        fear_greed_data = fear_greed.get_current_index()
+
+        # Get BTC as market proxy
+        btc_data = coingecko.get_market_data(['bitcoin'])
+        btc_market = btc_data[0] if btc_data else {}
+
+        market_data = {
+            'btc_dominance': 50,  # Would need global data
+            'market_cap_change_24h': btc_market.get('price_change_percentage_24h', 0)
+        }
+
+        assessment = risk_assessment.assess_risk(
+            market_data=market_data,
+            sentiment_data={'fear_greed': fear_greed_data}
+        )
+
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'market_risk': assessment,
+                'timestamp': datetime.utcnow().isoformat()
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error assessing market risk: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+# =============================================================================
+# API Routes - Smart Dashboard (Phase 4)
+# =============================================================================
+
+@api_bp.route('/dashboard/smart')
+def get_smart_dashboard():
+    """
+    Get smart dashboard with opportunity scores, alerts, and risk assessment.
+
+    Returns:
+        JSON with comprehensive smart analysis.
+    """
+    try:
+        # Get fear & greed
+        fear_greed_data = fear_greed.get_current_index()
+
+        # Get technical data for BTC
+        tech_data = technical.analyze_coin('bitcoin')
+
+        # Calculate opportunity score
+        score = opportunity_scorer.calculate_opportunity_score(
+            sentiment_data={'fear_greed': fear_greed_data},
+            technical_data=tech_data
+        )
+
+        # Get risk assessment
+        risk = risk_assessment.assess_risk(
+            sentiment_data={'fear_greed': fear_greed_data},
+            technical_data=tech_data
+        )
+
+        # Get alert summary
+        alerts_summary = alert_system.get_alert_summary()
+        recent_alerts = alert_system.get_recent_alerts(24)
+
+        # Evaluate alerts against current data
+        market_data = {
+            'fear_greed': fear_greed_data,
+            'rsi': tech_data.get('indicators', {}).get('rsi') if tech_data else None,
+            'macd': tech_data.get('indicators', {}).get('macd') if tech_data else None,
+            'opportunity_score': score['composite_score']
+        }
+        new_alerts = alert_system.evaluate_alerts(market_data)
+
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'opportunity': {
+                    'score': score['composite_score'],
+                    'signal': score['signal'],
+                    'signal_strength': score['signal_strength'],
+                    'recommendation': score['recommendation'],
+                    'confidence': score['confidence'],
+                    'factors': score['factors']
+                },
+                'risk': {
+                    'level': risk['overall_risk']['level'],
+                    'score': risk['overall_risk']['score'],
+                    'warnings': risk['warnings'],
+                    'recommendations': risk['recommendations']
+                },
+                'alerts': {
+                    'summary': alerts_summary,
+                    'recent': recent_alerts[:5],
+                    'new_triggers': new_alerts
+                },
+                'market_sentiment': fear_greed_data,
+                'timestamp': datetime.utcnow().isoformat()
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error generating smart dashboard: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500

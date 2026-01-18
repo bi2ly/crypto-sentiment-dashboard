@@ -1068,3 +1068,456 @@
     font-weight: 600;
     text-transform: uppercase;
 }
+
+/* --------------------------------------------------------------------------
+   Error and Info States
+   -------------------------------------------------------------------------- */
+.error-state,
+.info-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 2rem 1rem;
+    text-align: center;
+    border-radius: var(--radius-md);
+}
+
+.error-state {
+    background: var(--danger-bg);
+    color: var(--danger);
+}
+
+.info-state {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+}
+
+.error-icon,
+.info-icon {
+    font-size: 1.5rem;
+}
+
+.error-message,
+.info-message {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.error-state .error-message {
+    color: var(--danger);
+}
+
+.info-state .info-message {
+    color: var(--text-muted);
+}
+
+/* ==========================================================================
+   Smart Analysis - Phase 4
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Opportunity Score
+   -------------------------------------------------------------------------- */
+.opportunity-card {
+    border-left: 4px solid var(--accent);
+}
+
+.opportunity-content {
+    padding: 1rem 0;
+}
+
+.opportunity-score-display {
+    text-align: center;
+    padding: 1.5rem;
+}
+
+.opportunity-score-value {
+    font-size: 4rem;
+    font-weight: 800;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1;
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.opportunity-score-max {
+    font-size: 1.5rem;
+    color: var(--text-muted);
+    font-weight: 400;
+}
+
+.opportunity-signal {
+    font-size: 1.25rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-top: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    display: inline-block;
+}
+
+.opportunity-signal.strong-buy { background: var(--success-bg); color: var(--success); }
+.opportunity-signal.buy { background: var(--success-bg); color: var(--success); }
+.opportunity-signal.hold { background: var(--warning-bg); color: var(--warning); }
+.opportunity-signal.sell { background: var(--danger-bg); color: var(--danger); }
+.opportunity-signal.strong-sell { background: var(--danger-bg); color: var(--danger); }
+
+.opportunity-confidence {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1rem;
+    font-size: 0.875rem;
+}
+
+.confidence-item {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--text-secondary);
+}
+
+.confidence-value {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.opportunity-recommendation {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+/* --------------------------------------------------------------------------
+   Risk Assessment
+   -------------------------------------------------------------------------- */
+.risk-card {
+    border-left: 4px solid var(--warning);
+}
+
+.risk-content {
+    padding: 1rem 0;
+}
+
+.risk-level-display {
+    text-align: center;
+    padding: 1rem;
+}
+
+.risk-level-indicator {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    font-size: 2rem;
+}
+
+.risk-level-indicator.minimal { background: var(--success-bg); border: 3px solid var(--success); }
+.risk-level-indicator.low { background: var(--success-bg); border: 3px solid var(--success); }
+.risk-level-indicator.moderate { background: var(--warning-bg); border: 3px solid var(--warning); }
+.risk-level-indicator.high { background: var(--danger-bg); border: 3px solid var(--danger); }
+.risk-level-indicator.extreme { background: var(--danger-bg); border: 3px solid var(--danger); }
+
+.risk-level-text {
+    font-size: 1.25rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+}
+
+.risk-level-text.minimal, .risk-level-text.low { color: var(--success); }
+.risk-level-text.moderate { color: var(--warning); }
+.risk-level-text.high, .risk-level-text.extreme { color: var(--danger); }
+
+.risk-score {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.risk-breakdown-mini {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.risk-category {
+    text-align: center;
+    padding: 0.5rem;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+}
+
+.risk-category-name {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+.risk-category-level {
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-top: 0.25rem;
+}
+
+/* --------------------------------------------------------------------------
+   Alerts
+   -------------------------------------------------------------------------- */
+.alerts-card {
+    border-left: 4px solid var(--accent);
+}
+
+.alert-count {
+    background: var(--danger) !important;
+    color: white !important;
+    min-width: 24px;
+    text-align: center;
+}
+
+.alerts-content {
+    padding: 1rem 0;
+}
+
+.alerts-summary-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.alert-stat {
+    text-align: center;
+    padding: 1rem;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+}
+
+.alert-stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.alert-stat-value.critical { color: var(--danger); }
+.alert-stat-value.high { color: var(--warning); }
+.alert-stat-value.normal { color: var(--text-primary); }
+
+.alert-stat-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+.alerts-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.alert-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.alert-item:last-child {
+    border-bottom: none;
+}
+
+.alert-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md);
+    font-size: 1rem;
+}
+
+.alert-icon.critical { background: var(--danger-bg); color: var(--danger); }
+.alert-icon.high { background: var(--warning-bg); color: var(--warning); }
+.alert-icon.medium { background: var(--accent-bg, rgba(99, 102, 241, 0.1)); color: var(--accent); }
+.alert-icon.low { background: var(--bg-tertiary); color: var(--text-muted); }
+
+.alert-content {
+    flex: 1;
+}
+
+.alert-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.alert-message {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.alert-time {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+}
+
+.alert-priority {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.alert-priority.critical { background: var(--danger-bg); color: var(--danger); }
+.alert-priority.high { background: var(--warning-bg); color: var(--warning); }
+.alert-priority.medium { background: var(--accent-bg, rgba(99, 102, 241, 0.1)); color: var(--accent); }
+.alert-priority.low { background: var(--bg-tertiary); color: var(--text-muted); }
+
+/* --------------------------------------------------------------------------
+   Factors Grid
+   -------------------------------------------------------------------------- */
+.factors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    padding: 1rem 0;
+}
+
+.factor-card {
+    padding: 1rem;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    border-left: 3px solid var(--border-color);
+}
+
+.factor-card.bullish { border-left-color: var(--success); }
+.factor-card.bearish { border-left-color: var(--danger); }
+.factor-card.neutral { border-left-color: var(--warning); }
+
+.factor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.factor-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+}
+
+.factor-signal {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+}
+
+.factor-signal.bullish { background: var(--success-bg); color: var(--success); }
+.factor-signal.bearish { background: var(--danger-bg); color: var(--danger); }
+.factor-signal.neutral { background: var(--warning-bg); color: var(--warning); }
+
+.factor-score {
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 0.5rem;
+}
+
+.factor-bar {
+    height: 6px;
+    background: var(--bg-secondary);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.factor-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s ease;
+}
+
+.factor-bar-fill.bullish { background: var(--success); }
+.factor-bar-fill.bearish { background: var(--danger); }
+.factor-bar-fill.neutral { background: var(--warning); }
+
+.factor-details {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   Warnings
+   -------------------------------------------------------------------------- */
+.warning-badge {
+    background: var(--danger) !important;
+    color: white !important;
+    animation: pulse 2s infinite;
+}
+
+.warnings-list {
+    padding: 0.5rem 0;
+}
+
+.warning-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: var(--danger-bg);
+    border-radius: var(--radius-md);
+    margin-bottom: 0.5rem;
+    border-left: 3px solid var(--danger);
+}
+
+.warning-item:last-child {
+    margin-bottom: 0;
+}
+
+.warning-icon {
+    font-size: 1.25rem;
+}
+
+.warning-content {
+    flex: 1;
+}
+
+.warning-title {
+    font-weight: 600;
+    color: var(--danger);
+    margin-bottom: 0.25rem;
+}
+
+.warning-message {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.warning-action {
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    font-weight: 500;
+    margin-top: 0.5rem;
+}
+
+/* --------------------------------------------------------------------------
+   Score Badge
+   -------------------------------------------------------------------------- */
+.score-badge {
+    background: var(--accent-gradient) !important;
+    color: white !important;
+}
