@@ -189,6 +189,122 @@
         <div class="stat-label">Data Status</div>
     </div>
 </div>
+
+<!-- Advanced Features Section -->
+<h2 class="section-title mt-4">Advanced Analysis</h2>
+
+<div class="grid grid-2">
+    <!-- Sector Performance Card -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Sector Performance</span>
+            <span class="card-badge">24h Change</span>
+        </div>
+        <div class="sector-list" id="sectorList">
+            <div class="loading">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Whale Activity Card -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Whale Alerts</span>
+            <span class="card-badge">Large Transactions</span>
+        </div>
+        <div class="whale-alerts" id="whaleAlerts">
+            <div class="loading">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-2 mt-4">
+    <!-- Technical Analysis Card -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Technical Indicators</span>
+            <span class="card-badge">BTC Analysis</span>
+        </div>
+        <div class="technical-indicators" id="technicalIndicators">
+            <div class="loading">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Development Activity Card -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Development Activity</span>
+            <span class="card-badge">GitHub Stats</span>
+        </div>
+        <div class="dev-activity" id="devActivity">
+            <div class="loading">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Calendar Events Section -->
+<h2 class="section-title mt-4">Upcoming Events</h2>
+
+<div class="grid grid-3">
+    <!-- Exchange Listings Card -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Exchange Listings</span>
+            <span class="card-badge calendar-badge">Next 30 Days</span>
+        </div>
+        <div class="event-list" id="listingEvents">
+            <div class="loading">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Token Unlocks Card -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Token Unlocks</span>
+            <span class="card-badge calendar-badge">Scheduled</span>
+        </div>
+        <div class="event-list" id="unlockEvents">
+            <div class="loading">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Network Upgrades Card -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Network Upgrades</span>
+            <span class="card-badge calendar-badge">Planned</span>
+        </div>
+        <div class="event-list" id="upgradeEvents">
+            <div class="loading">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Influencer Activity Section -->
+<div class="card mt-4">
+    <div class="card-header">
+        <span class="card-title">Influencer Activity</span>
+        <span class="card-badge">Social Sentiment</span>
+    </div>
+    <div class="influencer-feed" id="influencerFeed">
+        <div class="loading">
+            <div class="spinner"></div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}

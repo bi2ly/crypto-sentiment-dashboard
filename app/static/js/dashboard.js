@@ -61,13 +61,13 @@ const Dashboard = {
         this.isLoading = true;
 
         try {
-            // Load data in parallel
+            // Load core data in parallel
             const [summaryData, trendingData] = await Promise.all([
                 CryptoDashboard.API.getDashboardSummary().catch(e => null),
                 CryptoDashboard.API.getTrending().catch(e => null)
             ]);
 
-            // Update components
+            // Update core components
             if (summaryData?.data) {
                 this.updateFearGreed(summaryData.data.fear_greed);
                 this.updateSignal(summaryData.data.market_signal);
@@ -77,6 +77,9 @@ const Dashboard = {
                 this.updateTrendingCoins(trendingData.data.coins);
             }
 
+            // Load advanced features data in parallel
+            await this.loadAdvancedData();
+
             // Update timestamp
             this.updateLastUpdated();
 
@@ -85,6 +88,64 @@ const Dashboard = {
         } finally {
             this.isLoading = false;
         }
+    },
+
+    async loadAdvancedData() {
+        try {
+            const [
+                sectorsData,
+                whalesData,
+                technicalData,
+                devData,
+                listingsData,
+                unlocksData,
+                upgradesData,
+                influencerData
+            ] = await Promise.all([
+                this.fetchAPI('/api/v1/sectors').catch(e => null),
+                this.fetchAPI('/api/v1/whales/analysis').catch(e => null),
+                this.fetchAPI('/api/v1/analysis/technical/bitcoin').catch(e => null),
+                this.fetchAPI('/api/v1/development').catch(e => null),
+                this.fetchAPI('/api/v1/calendar/listings').catch(e => null),
+                this.fetchAPI('/api/v1/calendar/unlocks').catch(e => null),
+                this.fetchAPI('/api/v1/calendar/upgrades').catch(e => null),
+                this.fetchAPI('/api/v1/influencers/activity').catch(e => null)
+            ]);
+
+            // Update advanced components
+            if (sectorsData?.data) {
+                SectorPerformance.update(sectorsData.data);
+            }
+            if (whalesData?.data) {
+                WhaleAlerts.update(whalesData.data);
+            }
+            if (technicalData?.data) {
+                TechnicalIndicators.update(technicalData.data);
+            }
+            if (devData?.data) {
+                DevActivity.update(devData.data);
+            }
+            if (listingsData?.data) {
+                CalendarEvents.updateListings(listingsData.data);
+            }
+            if (unlocksData?.data) {
+                CalendarEvents.updateUnlocks(unlocksData.data);
+            }
+            if (upgradesData?.data) {
+                CalendarEvents.updateUpgrades(upgradesData.data);
+            }
+            if (influencerData?.data) {
+                InfluencerFeed.update(influencerData.data);
+            }
+        } catch (error) {
+            console.error('Failed to load advanced data:', error);
+        }
+    },
+
+    async fetchAPI(url) {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
     },
 
     updateLastUpdated() {
@@ -312,6 +373,443 @@ const APIStatus = {
                 el.className = `api-status-dot ${isOnline ? 'online' : 'offline'}`;
             }
         });
+    }
+};
+
+// ==========================================================================
+// Sector Performance
+// ==========================================================================
+const SectorPerformance = {
+    update(data) {
+        const container = document.getElementById('sectorList');
+        if (!container || !data?.sectors) return;
+
+        const sectors = Object.entries(data.sectors).slice(0, 8);
+
+        if (sectors.length === 0) {
+            container.innerHTML = '<div class="event-empty">No sector data available</div>';
+            return;
+        }
+
+        container.innerHTML = sectors.map(([id, sector]) => this.renderSector(sector)).join('');
+    },
+
+    renderSector(sector) {
+        const change = sector.avg_change_24h || 0;
+        const changeClass = change >= 0 ? 'positive' : 'negative';
+        const sentimentClass = (sector.sentiment || 'neutral').toLowerCase().includes('bull') ? 'bullish' :
+                               (sector.sentiment || 'neutral').toLowerCase().includes('bear') ? 'bearish' : 'neutral';
+
+        return `
+            <div class="sector-item">
+                <div class="sector-info">
+                    <div class="sector-name">${this.escapeHtml(sector.name)}</div>
+                    <div class="sector-coins">${sector.coin_count || 0} coins</div>
+                </div>
+                <span class="sector-change ${changeClass}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</span>
+                <span class="sector-sentiment ${sentimentClass}">${sector.sentiment || 'N/A'}</span>
+            </div>
+        `;
+    },
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text || '';
+        return div.innerHTML;
+    }
+};
+
+// ==========================================================================
+// Whale Alerts
+// ==========================================================================
+const WhaleAlerts = {
+    update(data) {
+        const container = document.getElementById('whaleAlerts');
+        if (!container) return;
+
+        const transactions = data?.recent_transactions || data?.transactions || [];
+
+        if (transactions.length === 0) {
+            container.innerHTML = '<div class="event-empty">No whale alerts available</div>';
+            return;
+        }
+
+        container.innerHTML = transactions.slice(0, 5).map(tx => this.renderAlert(tx)).join('');
+    },
+
+    renderAlert(tx) {
+        const flowType = (tx.from_exchange && !tx.to_exchange) ? 'outflow' :
+                         (!tx.from_exchange && tx.to_exchange) ? 'inflow' : 'transfer';
+        const flowLabel = flowType === 'outflow' ? 'Exchange Outflow' :
+                          flowType === 'inflow' ? 'Exchange Inflow' : 'Transfer';
+
+        return `
+            <div class="whale-alert-item">
+                <span class="whale-icon">🐋</span>
+                <div class="whale-details">
+                    <div class="whale-amount">$${this.formatNumber(tx.amount_usd || 0)}</div>
+                    <div class="whale-flow">
+                        ${this.formatNumber(tx.amount || 0)} ${tx.symbol || 'BTC'}
+                        ${tx.from_exchange ? `from <span class="exchange">${tx.from_exchange}</span>` : ''}
+                        ${tx.to_exchange ? `to <span class="exchange">${tx.to_exchange}</span>` : ''}
+                    </div>
+                    <div class="whale-time">${this.formatTime(tx.timestamp)}</div>
+                </div>
+                <span class="whale-type ${flowType}">${flowLabel}</span>
+            </div>
+        `;
+    },
+
+    formatNumber(num) {
+        if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+        if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+        if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
+        return num.toFixed(2);
+    },
+
+    formatTime(timestamp) {
+        if (!timestamp) return 'Recently';
+        const date = new Date(timestamp);
+        return date.toLocaleTimeString();
+    }
+};
+
+// ==========================================================================
+// Technical Indicators
+// ==========================================================================
+const TechnicalIndicators = {
+    update(data) {
+        const container = document.getElementById('technicalIndicators');
+        if (!container) return;
+
+        const indicators = data?.indicators || {};
+        const summary = data?.summary || {};
+
+        container.innerHTML = `
+            ${this.renderIndicator('RSI (14)', indicators.rsi, this.getRSISignal(indicators.rsi))}
+            ${this.renderMACD(indicators.macd)}
+            ${this.renderBollinger(indicators.bollinger_bands, data?.current_price)}
+            ${this.renderSummary(summary)}
+        `;
+    },
+
+    renderIndicator(label, value, signal) {
+        const signalClass = signal === 'Buy' ? 'buy' : signal === 'Sell' ? 'sell' : 'neutral';
+        const displayValue = value != null ? value.toFixed(2) : 'N/A';
+
+        return `
+            <div class="indicator-item">
+                <div>
+                    <div class="indicator-label">${label}</div>
+                    ${label.includes('RSI') ? this.renderRSIBar(value) : ''}
+                </div>
+                <div style="text-align: right;">
+                    <div class="indicator-value">${displayValue}</div>
+                    <span class="indicator-signal ${signalClass}">${signal}</span>
+                </div>
+            </div>
+        `;
+    },
+
+    renderRSIBar(value) {
+        if (value == null) return '';
+        const fillClass = value <= 30 ? 'oversold' : value >= 70 ? 'overbought' : 'neutral';
+        return `
+            <div class="indicator-bar">
+                <div class="indicator-bar-fill ${fillClass}" style="width: ${value}%;"></div>
+            </div>
+        `;
+    },
+
+    renderMACD(macd) {
+        if (!macd) return '';
+        const signal = macd.histogram > 0 ? 'Buy' : macd.histogram < 0 ? 'Sell' : 'Neutral';
+        const signalClass = signal === 'Buy' ? 'buy' : signal === 'Sell' ? 'sell' : 'neutral';
+
+        return `
+            <div class="indicator-item">
+                <div>
+                    <div class="indicator-label">MACD</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">
+                        Line: ${macd.macd_line?.toFixed(2) || 'N/A'} | Signal: ${macd.signal_line?.toFixed(2) || 'N/A'}
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <div class="indicator-value">${macd.histogram?.toFixed(2) || 'N/A'}</div>
+                    <span class="indicator-signal ${signalClass}">${signal}</span>
+                </div>
+            </div>
+        `;
+    },
+
+    renderBollinger(bands, price) {
+        if (!bands) return '';
+        const position = price < bands.lower ? 'Oversold' : price > bands.upper ? 'Overbought' : 'Normal';
+        const signalClass = position === 'Oversold' ? 'buy' : position === 'Overbought' ? 'sell' : 'neutral';
+
+        return `
+            <div class="indicator-item">
+                <div>
+                    <div class="indicator-label">Bollinger Bands</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">
+                        Upper: $${bands.upper?.toFixed(0) || 'N/A'} | Lower: $${bands.lower?.toFixed(0) || 'N/A'}
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <div class="indicator-value">$${bands.middle?.toFixed(0) || 'N/A'}</div>
+                    <span class="indicator-signal ${signalClass}">${position}</span>
+                </div>
+            </div>
+        `;
+    },
+
+    renderSummary(summary) {
+        if (!summary?.overall_signal) return '';
+        const signal = summary.overall_signal;
+        const signalClass = signal.toLowerCase().includes('buy') ? 'buy' :
+                           signal.toLowerCase().includes('sell') ? 'sell' : 'neutral';
+
+        return `
+            <div class="indicator-item" style="background: var(--bg-secondary);">
+                <div class="indicator-label">Overall Signal</div>
+                <span class="indicator-signal ${signalClass}" style="font-size: 0.875rem; padding: 0.5rem 1rem;">
+                    ${signal}
+                </span>
+            </div>
+        `;
+    },
+
+    getRSISignal(rsi) {
+        if (rsi == null) return 'N/A';
+        if (rsi <= 30) return 'Buy';
+        if (rsi >= 70) return 'Sell';
+        return 'Neutral';
+    }
+};
+
+// ==========================================================================
+// Development Activity
+// ==========================================================================
+const DevActivity = {
+    update(data) {
+        const container = document.getElementById('devActivity');
+        if (!container) return;
+
+        const projects = data?.projects || [];
+
+        if (projects.length === 0) {
+            container.innerHTML = '<div class="event-empty">No development data available</div>';
+            return;
+        }
+
+        container.innerHTML = projects.slice(0, 6).map(project => this.renderProject(project)).join('');
+    },
+
+    renderProject(project) {
+        return `
+            <div class="dev-project">
+                <div class="dev-project-icon">💻</div>
+                <div class="dev-project-info">
+                    <div class="dev-project-name">${this.escapeHtml(project.name)}</div>
+                    <div class="dev-project-commits">
+                        ${project.commits_last_week || 0} commits/week | ${project.contributors || 0} contributors
+                    </div>
+                </div>
+                <div class="dev-activity-score">
+                    <div class="dev-score-value">${project.activity_score || 0}</div>
+                    <div class="dev-score-label">${project.activity_level || 'N/A'}</div>
+                </div>
+            </div>
+        `;
+    },
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text || '';
+        return div.innerHTML;
+    }
+};
+
+// ==========================================================================
+// Calendar Events
+// ==========================================================================
+const CalendarEvents = {
+    updateListings(data) {
+        const container = document.getElementById('listingEvents');
+        if (!container) return;
+
+        const listings = data?.listings || [];
+
+        if (listings.length === 0) {
+            container.innerHTML = '<div class="event-empty">No upcoming listings</div>';
+            return;
+        }
+
+        container.innerHTML = listings.slice(0, 5).map(event => this.renderListing(event)).join('');
+    },
+
+    updateUnlocks(data) {
+        const container = document.getElementById('unlockEvents');
+        if (!container) return;
+
+        const unlocks = data?.unlocks || [];
+
+        if (unlocks.length === 0) {
+            container.innerHTML = '<div class="event-empty">No upcoming unlocks</div>';
+            return;
+        }
+
+        container.innerHTML = unlocks.slice(0, 5).map(event => this.renderUnlock(event)).join('');
+    },
+
+    updateUpgrades(data) {
+        const container = document.getElementById('upgradeEvents');
+        if (!container) return;
+
+        const upgrades = data?.upgrades || [];
+
+        if (upgrades.length === 0) {
+            container.innerHTML = '<div class="event-empty">No upcoming upgrades</div>';
+            return;
+        }
+
+        container.innerHTML = upgrades.slice(0, 5).map(event => this.renderUpgrade(event)).join('');
+    },
+
+    renderListing(event) {
+        const impactClass = (event.impact || '').toLowerCase();
+
+        return `
+            <div class="event-item">
+                <div class="event-header">
+                    <div>
+                        <span class="event-coin">${this.escapeHtml(event.coin_name || event.symbol)}</span>
+                        <span class="event-symbol">${event.symbol || ''}</span>
+                    </div>
+                    <span class="event-days">${event.days_until || 0}d</span>
+                </div>
+                <div class="event-details">
+                    Listed on <span class="event-exchange">${event.exchange || 'Unknown'}</span>
+                    <span class="event-impact ${impactClass}">${event.impact || 'N/A'}</span>
+                </div>
+            </div>
+        `;
+    },
+
+    renderUnlock(event) {
+        const impactClass = (event.impact || '').toLowerCase();
+
+        return `
+            <div class="event-item">
+                <div class="event-header">
+                    <div>
+                        <span class="event-coin">${this.escapeHtml(event.coin_name || event.symbol)}</span>
+                        <span class="event-symbol">${event.symbol || ''}</span>
+                    </div>
+                    <span class="event-days">${event.days_until || 0}d</span>
+                </div>
+                <div class="event-details">
+                    <span class="event-amount">${this.formatNumber(event.unlock_amount || 0)}</span> tokens
+                    (${event.unlock_percentage || 0}%)
+                    <span class="event-impact ${impactClass}">${event.impact || 'N/A'}</span>
+                </div>
+            </div>
+        `;
+    },
+
+    renderUpgrade(event) {
+        return `
+            <div class="event-item">
+                <div class="event-header">
+                    <div>
+                        <span class="event-coin">${this.escapeHtml(event.coin_name || event.symbol)}</span>
+                        <span class="event-symbol">${event.symbol || ''}</span>
+                    </div>
+                    <span class="event-days">${event.days_until || 0}d</span>
+                </div>
+                <div class="event-details">
+                    <span class="event-upgrade-name">${event.upgrade_name || 'Upgrade'}</span>
+                    ${event.description ? `<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">${this.escapeHtml(event.description)}</div>` : ''}
+                </div>
+            </div>
+        `;
+    },
+
+    formatNumber(num) {
+        if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+        if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+        if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
+        return num.toString();
+    },
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text || '';
+        return div.innerHTML;
+    }
+};
+
+// ==========================================================================
+// Influencer Feed
+// ==========================================================================
+const InfluencerFeed = {
+    update(data) {
+        const container = document.getElementById('influencerFeed');
+        if (!container) return;
+
+        const mentions = data?.mentions || [];
+
+        if (mentions.length === 0) {
+            container.innerHTML = '<div class="event-empty">No recent influencer activity</div>';
+            return;
+        }
+
+        container.innerHTML = mentions.slice(0, 6).map(mention => this.renderMention(mention)).join('');
+    },
+
+    renderMention(mention) {
+        const influencer = mention.influencer || {};
+        const sentimentClass = (mention.sentiment || '').toLowerCase().includes('bull') ? 'bullish' :
+                               (mention.sentiment || '').toLowerCase().includes('bear') ? 'bearish' : 'neutral';
+        const initials = (influencer.name || 'U').split(' ').map(n => n[0]).join('').substring(0, 2);
+
+        return `
+            <div class="influencer-mention">
+                <div class="influencer-avatar">${initials}</div>
+                <div class="influencer-content">
+                    <div class="influencer-header">
+                        <div>
+                            <span class="influencer-name">${this.escapeHtml(influencer.name || 'Unknown')}</span>
+                            <span class="influencer-handle">${influencer.handle || ''}</span>
+                        </div>
+                        <span class="influencer-sentiment ${sentimentClass}">${mention.sentiment || 'N/A'}</span>
+                    </div>
+                    <div class="influencer-text">${this.escapeHtml(mention.text || '')}</div>
+                    <div class="influencer-meta">
+                        <div class="influencer-coins">
+                            ${(mention.coins_mentioned || []).map(coin =>
+                                `<span class="influencer-coin-tag">${coin}</span>`
+                            ).join('')}
+                        </div>
+                        <span>${this.formatEngagement(mention.engagement)}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    formatEngagement(engagement) {
+        if (!engagement) return '';
+        const total = (engagement.likes || 0) + (engagement.retweets || 0);
+        if (total >= 1e6) return (total / 1e6).toFixed(1) + 'M engagements';
+        if (total >= 1e3) return (total / 1e3).toFixed(1) + 'K engagements';
+        return total + ' engagements';
+    },
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text || '';
+        return div.innerHTML;
     }
 };
 

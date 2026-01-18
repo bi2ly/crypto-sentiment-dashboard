@@ -11,6 +11,7 @@ from datetime import datetime
 from flask import Blueprint, jsonify, render_template, request
 
 from app.api import coingecko, fear_greed, whale_alert, reddit_client, news_api
+from app.services import technical, whale_tracker, sector_analysis, calendar, influencer, github_tracker
 
 logger = logging.getLogger(__name__)
 
@@ -646,6 +647,507 @@ def get_dashboard_summary():
         })
     except Exception as e:
         logger.error(f"Error generating dashboard summary: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+# =============================================================================
+# API Routes - Technical Analysis (Phase 3)
+# =============================================================================
+
+@api_bp.route('/analysis/technical/<coin_id>')
+def get_technical_analysis(coin_id: str):
+    """
+    Get technical analysis for a coin.
+
+    Args:
+        coin_id: CoinGecko coin ID
+
+    Query Parameters:
+        days: Number of days of data (default: 30)
+
+    Returns:
+        JSON with RSI, MACD, Bollinger Bands, and recommendations.
+    """
+    days = request.args.get('days', 30, type=int)
+
+    try:
+        data = technical.analyze_coin(coin_id, days)
+        if data:
+            return jsonify({
+                'status': 'success',
+                'data': data
+            })
+        return jsonify({
+            'status': 'error',
+            'message': f'Unable to analyze {coin_id}. Insufficient data.',
+            'data': None
+        }), 404
+    except Exception as e:
+        logger.error(f"Error in technical analysis: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+# =============================================================================
+# API Routes - Whale Analysis (Phase 3)
+# =============================================================================
+
+@api_bp.route('/whales/analysis')
+def get_whale_analysis():
+    """
+    Get comprehensive whale activity analysis.
+
+    Query Parameters:
+        min_value: Minimum transaction value in USD (default: 1000000)
+
+    Returns:
+        JSON with whale activity, exchange flows, and alerts.
+    """
+    min_value = request.args.get('min_value', 1000000, type=int)
+
+    try:
+        data = whale_tracker.get_whale_analysis(min_value)
+        return jsonify({
+            'status': 'success',
+            'data': data
+        })
+    except Exception as e:
+        logger.error(f"Error in whale analysis: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+@api_bp.route('/whales/coin/<symbol>')
+def get_coin_whale_flow(symbol: str):
+    """
+    Get whale flow analysis for a specific coin.
+
+    Args:
+        symbol: Coin symbol (e.g., BTC, ETH)
+
+    Returns:
+        JSON with coin-specific whale activity.
+    """
+    try:
+        data = whale_tracker.get_coin_flow(symbol)
+        if data:
+            return jsonify({
+                'status': 'success',
+                'data': data
+            })
+        return jsonify({
+            'status': 'error',
+            'message': f'No whale data for {symbol}',
+            'data': None
+        }), 404
+    except Exception as e:
+        logger.error(f"Error in coin whale flow: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+@api_bp.route('/whales/alerts')
+def get_whale_alerts():
+    """
+    Get current whale alerts.
+
+    Returns:
+        JSON with high-impact whale alerts.
+    """
+    try:
+        alerts = whale_tracker.get_whale_alerts()
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'alert_count': len(alerts),
+                'alerts': alerts
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error fetching whale alerts: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+# =============================================================================
+# API Routes - Sector Analysis (Phase 3)
+# =============================================================================
+
+@api_bp.route('/sectors')
+def get_sector_overview():
+    """
+    Get overview of all crypto sectors.
+
+    Returns:
+        JSON with sector performance comparison.
+    """
+    try:
+        data = sector_analysis.get_sector_overview()
+        return jsonify({
+            'status': 'success',
+            'data': data
+        })
+    except Exception as e:
+        logger.error(f"Error in sector overview: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+@api_bp.route('/sectors/<sector_id>')
+def get_sector_detail(sector_id: str):
+    """
+    Get detailed analysis for a specific sector.
+
+    Args:
+        sector_id: Sector identifier
+
+    Returns:
+        JSON with sector details and top coins.
+    """
+    try:
+        data = sector_analysis.get_sector_detail(sector_id)
+        if data:
+            return jsonify({
+                'status': 'success',
+                'data': data
+            })
+        return jsonify({
+            'status': 'error',
+            'message': f'Sector {sector_id} not found',
+            'data': None
+        }), 404
+    except Exception as e:
+        logger.error(f"Error in sector detail: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+@api_bp.route('/sectors/leaders')
+def get_sector_leaders():
+    """
+    Get top performers from each sector.
+
+    Query Parameters:
+        limit: Number of coins per sector (default: 5)
+
+    Returns:
+        JSON with sector leaders.
+    """
+    limit = request.args.get('limit', 5, type=int)
+
+    try:
+        data = sector_analysis.get_sector_leaders(limit)
+        return jsonify({
+            'status': 'success',
+            'data': data
+        })
+    except Exception as e:
+        logger.error(f"Error fetching sector leaders: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+# =============================================================================
+# API Routes - Calendar Events (Phase 3)
+# =============================================================================
+
+@api_bp.route('/calendar/events')
+def get_calendar_events():
+    """
+    Get all upcoming crypto events.
+
+    Query Parameters:
+        days: Number of days to look ahead (default: 30)
+
+    Returns:
+        JSON with upcoming events.
+    """
+    days = request.args.get('days', 30, type=int)
+
+    try:
+        data = calendar.get_upcoming_events(days)
+        return jsonify({
+            'status': 'success',
+            'data': data
+        })
+    except Exception as e:
+        logger.error(f"Error fetching calendar events: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+@api_bp.route('/calendar/listings')
+def get_exchange_listings():
+    """
+    Get upcoming exchange listings.
+
+    Query Parameters:
+        days: Number of days to look ahead (default: 30)
+
+    Returns:
+        JSON with upcoming listings.
+    """
+    days = request.args.get('days', 30, type=int)
+
+    try:
+        data = calendar.get_exchange_listings(days)
+        return jsonify({
+            'status': 'success',
+            'data': data
+        })
+    except Exception as e:
+        logger.error(f"Error fetching exchange listings: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+@api_bp.route('/calendar/unlocks')
+def get_token_unlocks():
+    """
+    Get upcoming token unlocks.
+
+    Query Parameters:
+        days: Number of days to look ahead (default: 30)
+
+    Returns:
+        JSON with upcoming token unlocks.
+    """
+    days = request.args.get('days', 30, type=int)
+
+    try:
+        data = calendar.get_token_unlocks(days)
+        return jsonify({
+            'status': 'success',
+            'data': data
+        })
+    except Exception as e:
+        logger.error(f"Error fetching token unlocks: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+@api_bp.route('/calendar/upgrades')
+def get_network_upgrades():
+    """
+    Get upcoming network upgrades.
+
+    Query Parameters:
+        days: Number of days to look ahead (default: 90)
+
+    Returns:
+        JSON with upcoming network upgrades.
+    """
+    days = request.args.get('days', 90, type=int)
+
+    try:
+        data = calendar.get_network_upgrades(days)
+        return jsonify({
+            'status': 'success',
+            'data': data
+        })
+    except Exception as e:
+        logger.error(f"Error fetching network upgrades: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+# =============================================================================
+# API Routes - Influencer Tracking (Phase 3)
+# =============================================================================
+
+@api_bp.route('/influencers')
+def get_influencers():
+    """
+    Get list of tracked influencers.
+
+    Returns:
+        JSON with influencer list by category.
+    """
+    try:
+        data = influencer.get_influencer_list()
+        return jsonify({
+            'status': 'success',
+            'data': data
+        })
+    except Exception as e:
+        logger.error(f"Error fetching influencers: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+@api_bp.route('/influencers/activity')
+def get_influencer_activity():
+    """
+    Get recent influencer activity.
+
+    Query Parameters:
+        hours: Look back period in hours (default: 24)
+
+    Returns:
+        JSON with recent influencer mentions.
+    """
+    hours = request.args.get('hours', 24, type=int)
+
+    try:
+        data = influencer.get_recent_activity(hours)
+        return jsonify({
+            'status': 'success',
+            'data': data
+        })
+    except Exception as e:
+        logger.error(f"Error fetching influencer activity: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+@api_bp.route('/influencers/coin/<coin_id>')
+def get_coin_influencer_sentiment(coin_id: str):
+    """
+    Get influencer sentiment for a specific coin.
+
+    Args:
+        coin_id: Coin identifier
+
+    Returns:
+        JSON with influencer sentiment analysis.
+    """
+    try:
+        data = influencer.get_coin_influencer_sentiment(coin_id)
+        return jsonify({
+            'status': 'success',
+            'data': data
+        })
+    except Exception as e:
+        logger.error(f"Error fetching coin influencer sentiment: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+# =============================================================================
+# API Routes - Development Activity (Phase 3)
+# =============================================================================
+
+@api_bp.route('/development')
+def get_development_overview():
+    """
+    Get development activity overview for tracked projects.
+
+    Returns:
+        JSON with GitHub activity comparison.
+    """
+    try:
+        data = github_tracker.get_development_overview()
+        return jsonify({
+            'status': 'success',
+            'data': data
+        })
+    except Exception as e:
+        logger.error(f"Error fetching development overview: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+@api_bp.route('/development/<project_id>')
+def get_project_development(project_id: str):
+    """
+    Get development activity for a specific project.
+
+    Args:
+        project_id: Project identifier
+
+    Returns:
+        JSON with project GitHub stats.
+    """
+    try:
+        data = github_tracker.get_project_activity(project_id)
+        if data:
+            return jsonify({
+                'status': 'success',
+                'data': data
+            })
+        return jsonify({
+            'status': 'error',
+            'message': f'Project {project_id} not found',
+            'data': None
+        }), 404
+    except Exception as e:
+        logger.error(f"Error fetching project development: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+# =============================================================================
+# API Routes - Advanced Dashboard (Phase 3)
+# =============================================================================
+
+@api_bp.route('/dashboard/advanced')
+def get_advanced_dashboard():
+    """
+    Get advanced dashboard data including all Phase 3 features.
+
+    Returns:
+        JSON with comprehensive market analysis.
+    """
+    try:
+        # Fetch data from multiple sources
+        trending = coingecko.get_trending_coins()
+        fear_greed_data = fear_greed.get_current_index()
+        fear_greed_signal_data = fear_greed.get_sentiment_signal()
+        whale_data = whale_tracker.get_whale_analysis()
+        sector_data = sector_analysis.get_sector_overview()
+        influencer_data = influencer.get_recent_activity(24)
+        calendar_data = calendar.get_upcoming_events(14)
+
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'trending_coins': trending,
+                'fear_greed': fear_greed_data,
+                'market_signal': fear_greed_signal_data,
+                'whale_activity': whale_data,
+                'sectors': sector_data,
+                'influencer_activity': influencer_data,
+                'upcoming_events': calendar_data,
+                'timestamp': datetime.utcnow().isoformat()
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error generating advanced dashboard: {e}")
         return jsonify({
             'status': 'error',
             'message': str(e)
